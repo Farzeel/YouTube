@@ -35,7 +35,7 @@ refreshToken:{
     type:String
 },
 password:{
-    type:string,
+    type:String,
     required:[true, "password is required"]
 },
 watchHistory:[
