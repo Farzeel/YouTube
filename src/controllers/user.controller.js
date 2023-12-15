@@ -73,4 +73,88 @@ const registerUser = asyncHandler(async (req,res)=>{
    
 })
 
-export{registerUser}
+const generateAccessTokenAndRefreshToken  = async (userId)=>{
+
+try {
+
+    const user = await User.findById(user._id)
+
+    const accessToken = user.generateAccessToken()
+    const refreshToken = user.generateRefreshToken()
+
+    user.refreshToken = refreshToken
+
+    await user.save()
+
+    return {accessToken,refreshToken}
+
+    
+} catch (error) {
+    throw new ApiError(500, "something went wrong while generating access and refreh Token")
+}
+
+}
+
+
+const loginUser = asyncHandler(async (req,res)=>{
+
+// get Details from user
+// check for validation || filed should not be empty
+// check username or email exists
+// compare the password
+// genertae access Token and referesh Token 
+// send Cookie 
+
+const {userName, email, password} = req.body
+
+if (!userName || !email || !password) {
+    throw new ApiError(400, "input field cannot be empty")
+}
+
+const userExist = await User.findOne({$or:[{userName},{email}]})
+
+if (!userExist) {
+    throw new ApiError(422, "Invalid Credentials")
+}
+
+const PasswordIsCorrect = await userExist.isPasswordCorrect(password)
+
+if (!PasswordIsCorrect) {
+    throw new ApiError(422 , "Invalid Credentials. Please try again")
+}
+
+const {accessToken, refreshToken} = await generateAccessTokenAndRefreshToken(userExist._id)
+
+const loggedInUser = await User.findById(userExist._id).select("-password -refreshToken")
+
+const option = {
+    htppOnly:true,
+    secure:true
+}
+
+return res.status(200)
+.cookie("accessToken",accessToken, option)
+.cookie("refreshtoken", refreshToken, option)
+.json(new ApiResponse(200, loggedInUser, "user loggedIn Successfully "))
+
+
+})
+
+const logoutUser = asyncHandler(async (req, res)=>{
+await User.findByIdAndUpdate(
+    req.user._id , 
+    {$set:{refreshToken: undefined}}
+)
+
+const option = {
+    htppOnly:true,
+    secure:true
+}
+
+return res.status(200)
+.clearCookie("accessToken",option)
+.clearCookie("refreshToken",option)
+.json(200, {}, "User LoggedOut ")
+})
+
+export{registerUser, loginUser , logoutUser}
