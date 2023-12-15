@@ -3,21 +3,10 @@ import { ApiError } from "../utils/ApiError.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { fileUploadOnCloudinary } from "../utils/cloudinary.js"
+import fs from "fs"
 
 const registerUser = asyncHandler(async (req,res)=>{
-    // Take Details from user
-    // Validate the details
-    // check user already exists or not via username or email
-    // check for images , check for avatar
-    // upload images on cloudinary , check for avatar again
-    // create user object and save on database
-    // remove password and refresh token field from response
-    // check for user creation
-    // send response to user
-    
-
-
-
+   
     const {userName,email,password,fullName } = req.body
 
     if([userName,email,password,fullName].some(field =>field?.trim()==="")){
@@ -27,8 +16,19 @@ const registerUser = asyncHandler(async (req,res)=>{
     const existedUser = await User.findOne({$or:[{email},{userName}]})
 
     if (existedUser) {
+    
+
+        if ( Array.isArray(req.files.avatar)) {
+            fs.unlinkSync(req.files.avatar[0].path);
+        }
+        if ( Array.isArray(req.files.coverImage) ) {
+            fs.unlinkSync(req.files.coverImage[0].path);
+        }
         throw new ApiError(409,"user with this email or username already exist. please try with other email or username")
     }
+    
+   
+   
     
     const avatarLocalPath = req.files?.avatar[0]?.path
     let coverImageLocalPath ;
@@ -36,6 +36,7 @@ const registerUser = asyncHandler(async (req,res)=>{
     if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length >0)
     {
         coverImageLocalPath = req.files.coverImage[0].path
+     
     }
 
     if (!avatarLocalPath) {
